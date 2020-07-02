@@ -1,0 +1,32 @@
+{
+  "name": "sourcery",
+  "version": "0.0.0",
+  "description": "",
+  "bin": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "browser-automation",
+    "cli",
+    "endpoints",
+    "puppeteer",
+    "source-files",
+    "urls",
+    "web-application-security"
+  ],
+  "author": "Zachary Balder",
+  "license": "MIT",
+  "dependencies": {
+    "commander": "5.1.0",
+    "puppeteer": "4.0.1"
+  },
+  "devDependencies": {
+    "eslint": "7.3.1",
+    "eslint-config-standard": "14.1.1",
+    "eslint-plugin-import": "2.22.0",
+    "eslint-plugin-node": "11.1.0",
+    "eslint-plugin-promise": "4.2.1",
+    "eslint-plugin-standard": "4.0.1"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "extends": "standard",
+  "root": true,
+  "rules": {
+    "key-spacing": "off",
+    "no-unmodified-loop-condition": "off"
+  }
+}
