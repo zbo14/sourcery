@@ -8,6 +8,13 @@ const commander = require('commander')
 const path = require('path')
 const puppeteer = require('puppeteer')
 
+const EXTENSIONS = [
+  'asp', 'aspx', 'css',
+  'htm', 'html', 'js',
+  'json', 'php', 'txt',
+  'xml'
+]
+
 const banner = fs.readFileSync(path.join(__dirname, 'banner'), 'utf8')
 const error = msg => console.error('\x1b[31m%s\x1b[0m', msg)
 const warn = msg => console.warn('\x1b[33m%s\x1b[0m', msg)
@@ -31,17 +38,17 @@ const sortFile = async filename => {
 
 const regex = {
   path: /("|')(\/[\w\d?&=#.!:_-][\w\d?/&=#.!:_-]*?)\1/g,
-  url:  /https?:\/\/[^\s,'"|()<>[\]{}]+/g
+  url:  /https?:\/\/[^\s,'"|()<>[\]]+/g
 }
 
 program
   .version('0.0.0')
   .arguments('<url>')
-  .option('-d, --domains <list>', 'comma-separated list of domains')
-  .option('-e, --extensions <list>', 'comma-separated list of extensions', 'css,html,js')
+  .option('-d, --domains <list>', 'comma-separated list of domains; sourcery looks for results under these domains')
+  .option('-e, --extensions <list>', 'comma-separated list of extensions; sourcery parses results from files with these extensions')
   .option('-o, --output <dir>', 'path to output directory', '.')
   .option('-s, --sort-every <int>', 'sort output files every x seconds, removing duplicate values', 60)
-  .option('-x, --proxy <[proto://]host:port>', 'use proxy for chromium')
+  .option('-x, --proxy <[proto://]host:port>', 'use a proxy (e.g. Burp) for Chromium')
   .action(async (url, opts) => {
     try {
       const stat = await fs.promises.lstat(opts.output)
@@ -67,26 +74,36 @@ program
 
     const sortEvery = +opts.sortEvery * 1e3
 
-    let extensions = opts.extensions
+    let extensions = (opts.extensions || EXTENSIONS)
       .split(',')
       .filter(Boolean)
       .map(ext => ext.trim().toLowerCase())
 
     extensions = [...new Set(extensions)]
-
     const args = []
 
     opts.proxy && args.push('--proxy-server=' + opts.proxy)
 
     error(banner)
 
+    let exts = extensions.slice(0, 3).join(', ')
+
+    if (exts.length > 3) {
+      exts += ', etc.'
+    }
+
     warn('[-] Opening browser window')
     warn('[-] Root domains: ' + domains.join(', '))
-    warn('[-] Extensions: ' + extensions.join(', '))
+    warn('[-] Parsing endpoints from files with extensions: ' + exts)
 
     extensions = extensions.map(ext => '.' + ext)
 
-    const browser = await puppeteer.launch({ args, headless: false })
+    const browser = await puppeteer.launch({
+      args,
+      defaultViewport: null,
+      headless: false
+    })
+
     const page = await browser.newPage()
     const uniqueDomains = new Set()
 
@@ -109,7 +126,7 @@ program
         return
       }
 
-      const inScope = domains.some(domain => {
+      const inScope = !url.hostname.startsWith('*.') && domains.some(domain => {
         return url.hostname === domain || url.hostname.endsWith('.' + domain)
       })
 
