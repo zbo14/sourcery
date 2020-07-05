@@ -74,10 +74,14 @@ program
 
     const sortEvery = +opts.sortEvery * 1e3
 
-    let extensions = (opts.extensions || EXTENSIONS)
+    let extensions = (opts.extensions || '')
       .split(',')
       .filter(Boolean)
       .map(ext => ext.trim().toLowerCase())
+
+    if (!extensions.length) {
+      extensions = EXTENSIONS.slice()
+    }
 
     extensions = [...new Set(extensions)]
     const args = []
