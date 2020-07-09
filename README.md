@@ -4,9 +4,13 @@ A command-line utility that spins up a Chromium browser window and parses URLs, 
 
 ## Why?
 
-Source files (e.g. JavaScript-s) often contain information about subdomains and endpoints that's difficult to discover via other enumeration/brute-forcing methods. A single webpage may require dozens of scripts, each containing tens of thousands of lines of code. There are existing tools to crawl sites and parse endpoints from these large files, but these tools aren't always easy to integrate with existing workflows.
+Source files (e.g. JavaScript-s) often contain information about subdomains and endpoints that's difficult to discover via other enumeration/brute-forcing methods. A single webpage may require dozens of scripts, each containing tens of thousands of lines of code. There are existing tools to crawl sites and parse endpoints from these large files, but these tools aren't always free or easy to integrate with existing workflows.
 
 If you're a bug-bounty hunter or web security researcher, chances are you're spending a lot of time in the browser. While you navigate around a web application and test different functionality,`sourcery` parses URLs, domains, and endpoints from all the files and response payloads it sees. It writes this information to a directory you specify.
+
+## Install
+
+`npm i @zbo14/sourcery`
 
 ## Usage
 
@@ -31,5 +35,5 @@ Options:
   -h, --help                         display help for command
 ```
 
-`sourcery` takes a `<file>` of URLs, visits them in serial, and stops on the last one. The reasoning here is, there may be a lot of URLs you want to visit but relatively few URLs where you want to test functionality. `sourcery` flips through the webpages you *just* want to visit and parses endpoints/URLs from source files.
-Then it pauses on the last URL (e.g. the index URL for the main web application). Then you can manually navigate through the app and test functionality while `sourcery` continues to report domains, endpoints, and URLs.
+`sourcery` takes a `<file>` of URLs, visits them in serial, and stops at the last one. The reasoning here is, there may be a lot of URLs you want to visit but comparatively few URLs where you want to test functionality. `sourcery` flips through the webpages you *just* want to visit and parses endpoints/URLs from source files.
+Then, it pauses on the last URL (e.g. the homepage for the main web application) so you can manually navigate/test functionality while it continues to find domains, endpoints, and URLs.

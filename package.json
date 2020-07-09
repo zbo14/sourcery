@@ -1,8 +1,14 @@
 {
-  "name": "sourcery",
+  "name": "@zbo14/sourcery",
   "version": "0.0.0",
-  "description": "",
-  "bin": "index.js",
+  "description": "A CLI that starts a Chromium browser window and parses URLs, domains, and endpoints from response payloads",
+  "bin": {
+    "sourcery": "index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zbo14/sourcery"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
