@@ -11,8 +11,8 @@ const puppeteer = require('puppeteer')
 const EXTENSIONS = [
   'asp', 'aspx', 'css',
   'htm', 'html', 'js',
-  'json', 'php', 'txt',
-  'xml'
+  'json', 'jsp', 'php',
+  'ts', 'txt', 'xml'
 ]
 
 const banner = fs.readFileSync(path.join(__dirname, 'banner'), 'utf8')
@@ -29,27 +29,40 @@ const matchAll = (regex, string, cb) => {
   }
 }
 
-const sortFile = async filename => {
-  const data = await fs.promises.readFile(filename, 'utf8')
-  const lines = data.split('\n').filter(Boolean)
-  const sorted = [...new Set(lines)].sort().join('\n')
-  await fs.promises.writeFile(filename, sorted, 'utf8')
-}
-
 const regex = {
   path: /("|')(\/[\w\d?&=#.!:_-][\w\d?/&=#.!:_-]*?)\1/g,
-  url:  /https?:\/\/[^\s,'"|()<>[\]]+/g
+  url:  /(https?:\/\/[^\s,'"|()<>[\]]+?)(?=https?:\/\/|[\s,'"|()<>[\]])/g
 }
 
 program
   .version('0.0.0')
-  .arguments('<url>')
+  .arguments('<file>')
   .option('-d, --domains <list>', 'comma-separated list of domains; sourcery looks for results under these domains')
   .option('-e, --extensions <list>', 'comma-separated list of extensions; sourcery parses results from files with these extensions')
   .option('-o, --output <dir>', 'path to output directory', '.')
-  .option('-s, --sort-every <int>', 'sort output files every x seconds, removing duplicate values', 60)
   .option('-x, --proxy <[proto://]host:port>', 'use a proxy (e.g. Burp) for Chromium')
-  .action(async (url, opts) => {
+  .action(async (file, opts) => {
+    let data
+
+    try {
+      data = await fs.promises.readFile(file, 'utf8')
+    } catch {
+      error('[!] Cannot read file: ' + file)
+      process.exit(1)
+    }
+
+    let urls
+
+    try {
+      urls = data
+        .split('\n')
+        .filter(Boolean)
+        .map(url => new URL(url))
+    } catch (err) {
+      error('[!] ' + err.message)
+      process.exit(1)
+    }
+
     try {
       const stat = await fs.promises.lstat(opts.output)
 
@@ -71,8 +84,6 @@ program
       error('[!] No domains specified')
       process.exit(1)
     }
-
-    const sortEvery = +opts.sortEvery * 1e3
 
     let extensions = (opts.extensions || '')
       .split(',')
@@ -105,7 +116,8 @@ program
     const browser = await puppeteer.launch({
       args,
       defaultViewport: null,
-      headless: false
+      headless: false,
+      ignoreHTTPSErrors: true
     })
 
     const page = await browser.newPage()
@@ -121,20 +133,18 @@ program
       urls: fs.createWriteStream(urlsFile, { flags: 'a' })
     }
 
-    const pathCb = ([,, path]) => streams.paths.write(path + '\n')
-
-    const urlCb = ([url]) => {
-      try {
-        url = new URL(url)
-      } catch {
-        return
-      }
-
-      const inScope = !url.hostname.startsWith('*.') && domains.some(domain => {
-        return url.hostname === domain || url.hostname.endsWith('.' + domain)
+    const inScope = subdomain => {
+      return !subdomain.startsWith('*.') && domains.some(domain => {
+        return subdomain === domain || subdomain.endsWith('.' + domain)
       })
+    }
 
-      if (inScope) {
+    const handlePath = async (source, path) => {
+      streams.paths.write(source + ' -> ' + path + '\n')
+    }
+
+    const handleURL = async url => {
+      if (inScope(url.hostname)) {
         if (!uniqueDomains.has(url.hostname)) {
           uniqueDomains.add(url.hostname)
           streams.domains.write(url.hostname + '\n')
@@ -153,9 +163,19 @@ program
         return
       }
 
+      handleURL(url)
+
       const headers = JSON.stringify(resp.headers())
 
-      matchAll(regex.url, headers, urlCb)
+      matchAll(regex.url, headers, ([, url]) => {
+        try {
+          url = new URL(url)
+        } catch {
+          return
+        }
+
+        handleURL(url)
+      })
 
       const { ext } = path.parse(url.pathname)
 
@@ -169,45 +189,51 @@ program
         return
       }
 
-      matchAll(regex.url, text, urlCb)
-      matchAll(regex.path, text, pathCb)
+      matchAll(regex.url, text, ([, url]) => {
+        try {
+          url = new URL(url)
+        } catch {
+          return
+        }
+
+        handleURL(url)
+      })
+
+      if (inScope(url.hostname)) {
+        matchAll(regex.path, text, ([,, path]) => handlePath(url.href, path))
+      }
     })
 
-    let done
+    for (let i = 0; i < urls.length; i++) {
+      const { href } = urls[i]
 
-    if (sortEvery) {
-      (async () => {
-        while (!done) {
-          await Promise.all([
-            sortFile(domainsFile),
-            sortFile(pathsFile),
-            sortFile(urlsFile)
-          ])
+      try {
+        await page.goto(href)
+      } catch (err) {
+        error('[!] ' + err.message)
+        continue
+      }
 
-          await new Promise(resolve => setTimeout(resolve, sortEvery))
-        }
-      })().catch(err => {
-        error(err)
-        process.exit(1)
-      })
+      warn('[+] ' + href)
     }
 
-    await page.goto(url)
+    warn('[-] Reached last URL')
+    warn('[-] Waiting for page to close')
+
     await once(page, 'close')
 
-    done = true
-
-    await Promise.all([
-      sortFile(domainsFile),
-      sortFile(pathsFile),
-      sortFile(urlsFile)
-    ])
-
     warn('[-] Page closed')
-    warn('[-] Exiting')
+
+    Object.values(streams).forEach(stream => stream.end())
 
     await browser.close()
+
+    warn('[-] Exiting')
+
+    process.exit()
   })
   .parseAsync(process.argv)
-  .catch(err => error(err) || 1)
-  .then(process.exit)
+  .catch(err => {
+    error(err)
+    process.exit(1)
+  })
