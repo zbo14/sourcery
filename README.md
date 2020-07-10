@@ -28,12 +28,12 @@ Usage: sourcery [options] <file>
 
 Options:
   -V, --version                      output the version number
-  -d, --domains <list>               comma-separated list of domains; sourcery looks for results under these domains
+  -d, --domains <list>               comma-separated list of root domains; sourcery looks for results under these domains
   -e, --extensions <list>            comma-separated list of extensions; sourcery parses results from files with these extensions
   -o, --output <dir>                 path to output directory (default: ".")
+  -p, --pause                        pause on last page
   -x, --proxy <[proto://]host:port>  use a proxy (e.g. Burp) for Chromium
   -h, --help                         display help for command
 ```
 
-`sourcery` takes a `<file>` of URLs, visits them in serial, and stops at the last one. The reasoning here is, there may be a lot of URLs you want to visit but comparatively few URLs where you want to test functionality. `sourcery` flips through the webpages you *just* want to visit and parses endpoints/URLs from source files.
-Then, it pauses on the last URL (e.g. the homepage for the main web application) so you can manually navigate/test functionality while it continues to find domains, endpoints, and URLs.
+`sourcery` takes a `<file>` of URLs and visits them in serial. You can instruct `sourcery` to pause on the last webpage with the `-p` option, in case you want to manually navigate/test functionality. `sourcery` will continue to find endpoints, subdomains, and URLs.

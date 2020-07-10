@@ -37,9 +37,10 @@ const regex = {
 program
   .version('0.0.0')
   .arguments('<file>')
-  .option('-d, --domains <list>', 'comma-separated list of domains; sourcery looks for results under these domains')
+  .option('-d, --domains <list>', 'comma-separated list of root domains; sourcery looks for results under these domains')
   .option('-e, --extensions <list>', 'comma-separated list of extensions; sourcery parses results from files with these extensions')
   .option('-o, --output <dir>', 'path to output directory', '.')
+  .option('-p, --pause', 'pause on last page')
   .option('-x, --proxy <[proto://]host:port>', 'use a proxy (e.g. Burp) for Chromium')
   .action(async (file, opts) => {
     let data
@@ -123,13 +124,13 @@ program
     const page = await browser.newPage()
     const uniqueDomains = new Set()
 
-    const domainsFile = path.resolve(opts.output, 'domains.txt')
     const pathsFile = path.resolve(opts.output, 'paths.txt')
+    const subdomainsFile = path.resolve(opts.output, 'subdomains.txt')
     const urlsFile = path.resolve(opts.output, 'urls.txt')
 
     const streams = {
-      domains: fs.createWriteStream(domainsFile, { flags: 'a' }),
       paths: fs.createWriteStream(pathsFile, { flags: 'a' }),
+      subdomains: fs.createWriteStream(subdomainsFile, { flags: 'a' }),
       urls: fs.createWriteStream(urlsFile, { flags: 'a' })
     }
 
@@ -147,7 +148,7 @@ program
       if (inScope(url.hostname)) {
         if (!uniqueDomains.has(url.hostname)) {
           uniqueDomains.add(url.hostname)
-          streams.domains.write(url.hostname + '\n')
+          streams.subdomains.write(url.hostname + '\n')
         }
 
         streams.urls.write(url.href + '\n')
@@ -218,9 +219,13 @@ program
     }
 
     warn('[-] Reached last URL')
-    warn('[-] Waiting for page to close')
 
-    await once(page, 'close')
+    if (opts.pause) {
+      warn('[-] Waiting for page to close')
+      await once(page, 'close')
+    } else {
+      await page.close()
+    }
 
     warn('[-] Page closed')
 
