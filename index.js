@@ -9,10 +9,11 @@ const path = require('path')
 const puppeteer = require('puppeteer')
 
 const EXTENSIONS = [
-  'asp', 'aspx', 'css',
-  'htm', 'html', 'js',
-  'json', 'jsp', 'php',
-  'ts', 'txt', 'xml'
+  'asp', 'aspx', 'config',
+  'css', 'htm', 'html',
+  'js', 'json', 'jsp',
+  'log', 'php', 'ts',
+  'txt', 'wadl', 'xml'
 ]
 
 const banner = fs.readFileSync(path.join(__dirname, 'banner'), 'utf8')
@@ -200,16 +201,14 @@ program
         handleURL(url)
       })
 
-      if (inScope(url.hostname)) {
-        matchAll(regex.path, text, ([,, path]) => handlePath(url.href, path))
-      }
+      matchAll(regex.path, text, ([,, path]) => handlePath(url.href, path))
     })
 
     for (let i = 0; i < urls.length; i++) {
       const { href } = urls[i]
 
       try {
-        await page.goto(href)
+        await page.goto(href, { timeout: 15e3 })
       } catch (err) {
         error('[!] ' + err.message)
         continue
