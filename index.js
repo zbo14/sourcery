@@ -118,7 +118,7 @@ program
     const browser = await puppeteer.launch({
       args,
       defaultViewport: null,
-      headless: false,
+      headless: !opts.pause,
       ignoreHTTPSErrors: true
     })
 
