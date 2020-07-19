@@ -8,13 +8,9 @@ const commander = require('commander')
 const path = require('path')
 const puppeteer = require('puppeteer')
 
-const EXTENSIONS = [
-  'asp', 'aspx', 'config',
-  'css', 'htm', 'html',
-  'js', 'json', 'jsp',
-  'log', 'php', 'ts',
-  'txt', 'wadl', 'xml'
-]
+const EXTENSIONS = fs.readFileSync(path.join(__dirname, 'lists', 'extensions.txt'), 'utf8')
+  .split('\n')
+  .filter(Boolean)
 
 const banner = fs.readFileSync(path.join(__dirname, 'banner'), 'utf8')
 const error = msg => console.error('\x1b[31m%s\x1b[0m', msg)
@@ -37,31 +33,46 @@ const regex = {
 
 program
   .version('0.0.0')
-  .arguments('<file>')
   .option('-d, --domains <list>', 'comma-separated list of root domains; sourcery looks for results under these domains')
   .option('-e, --extensions <list>', 'comma-separated list of extensions; sourcery parses results from files with these extensions')
-  .option('-o, --output <dir>', 'path to output directory', '.')
+  .option('-f, --file <file>', 'file containing URLs to visit (overrides -u)')
+  .option('-o, --output <dir>', 'path to output directory', '$PWD')
   .option('-p, --pause', 'pause on last page')
+  .option('-u, --url <url>', 'single URL to visit (implies -p)')
   .option('-x, --proxy <[proto://]host:port>', 'use a proxy (e.g. Burp) for Chromium')
-  .action(async (file, opts) => {
-    let data
-
-    try {
-      data = await fs.promises.readFile(file, 'utf8')
-    } catch {
-      error('[!] Cannot read file: ' + file)
-      process.exit(1)
-    }
-
+  .action(async opts => {
     let urls
 
-    try {
-      urls = data
-        .split('\n')
-        .filter(Boolean)
-        .map(url => new URL(url))
-    } catch (err) {
-      error('[!] ' + err.message)
+    if (opts.file) {
+      let data
+
+      try {
+        data = await fs.promises.readFile(opts.file, 'utf8')
+      } catch {
+        error('[!] Cannot read file: ' + opts.file)
+        process.exit(1)
+      }
+
+      try {
+        urls = data
+          .split('\n')
+          .filter(Boolean)
+          .map(url => new URL(url))
+      } catch (err) {
+        error('[!] File contains invalid URL:' + err.message.split(':').pop())
+        process.exit(1)
+      }
+    } else if (opts.url) {
+      try {
+        urls = [new URL(opts.url)]
+      } catch (err) {
+        error('[!] ' + err.message)
+        process.exit(1)
+      }
+
+      opts.pause = true
+    } else {
+      error('[!] Must specify --file or --url')
       process.exit(1)
     }
 

@@ -24,16 +24,18 @@ If you're a bug-bounty hunter or web security researcher, chances are you're spe
   \___j \___/  \__,_jl__j\_j \____jl_____jl__j\_jl____/
 
 
-Usage: sourcery [options] <file>
+Usage: sourcery [options]
 
 Options:
   -V, --version                      output the version number
   -d, --domains <list>               comma-separated list of root domains; sourcery looks for results under these domains
   -e, --extensions <list>            comma-separated list of extensions; sourcery parses results from files with these extensions
-  -o, --output <dir>                 path to output directory (default: ".")
+  -f, --file <file>                  file containing URLs to visit (overrides -u)
+  -o, --output <dir>                 path to output directory (default: "$PWD")
   -p, --pause                        pause on last page
+  -u, --url <url>                    single URL to visit (implies -p)
   -x, --proxy <[proto://]host:port>  use a proxy (e.g. Burp) for Chromium
   -h, --help                         display help for command
 ```
 
-`sourcery` takes a `<file>` of URLs and visits them in serial. You can instruct `sourcery` to pause on the last webpage with the `-p` option, in case you want to manually navigate/test functionality. `sourcery` will continue to find endpoints, subdomains, and URLs.
+`sourcery` expects a single `--url` or `--file` of URLs and visits them in serial. You can instruct `sourcery` to pause on the last webpage with the `-p` option, in case you want to manually navigate/test functionality. `sourcery` will continue to find endpoints, subdomains, and URLs that fall under the specified `--domains`.

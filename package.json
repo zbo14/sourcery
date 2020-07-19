@@ -1,6 +1,6 @@
 {
   "name": "@zbo14/sourcery",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A CLI that starts a Chromium browser window and parses URLs, domains, and endpoints from response payloads",
   "bin": {
     "sourcery": "index.js"
